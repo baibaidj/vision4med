@@ -1,3 +1,7 @@
+# coding=utf-8
+# @Time	  : 2019-04-09 18:33
+# @Author   : Monolith
+# @FileName : xception39.py
 
 from nets.net_basis import *
 
@@ -117,25 +121,53 @@ def xception_39(img_input, nb_filter_factor = 1):
     x = Activation('relu', name='block1_conv1_act')(x)
 
     x = MaxPool2D(pool_size=(3, 3), strides=2, padding='same')(x)
-    end_points['pool1'] = x
-    print('pool1', x.shape)
+    end_points['out4'] = x
+    print('out4', x.shape)
 
     x = separable_block_down(x, int(16*nb_filter_factor), ix=0, filter_size=(3, 3))
     for i in range(3):
         x = separable_res_block_deep(x, ix=10 + i, filter_size=(3, 3), dilation=max(3, i + 1))
-    end_points['pool2'] = x
-    print('pool2', x.shape)
+    end_points['out8'] = x
+    print('out8', x.shape)
 
     x = separable_block_down(x, int(32*nb_filter_factor), ix=1, filter_size=(3, 3))
     for i in range(7):
         x = separable_res_block_deep(x, ix=20 + i, filter_size=(3, 3), dilation=max(3, i + 1))
-    end_points['pool3'] = x
-    print('pool3', x.shape)
+    end_points['out16'] = x
+    print('out16', x.shape)
 
     x = separable_block_down(x, int(64*nb_filter_factor), ix=2, filter_size=(3, 3))
     for i in range(3):
         x = separable_res_block_deep(x, ix=30 + i, filter_size=(3, 3), dilation=max(3, i + 1))
-    end_points['pool4'] = x
-    print('pool4', x.shape)
+    end_points['out32'] = x
+    print('out32', x.shape)
 
     return end_points
+
+
+
+if __name__ == '__main__':
+    from keras.utils.vis_utils import plot_model
+    from time import time
+    import os
+
+    result_path = r'/home/dejun/Pictures'
+    tic = time()
+    img_input = Input((None, None, 1))
+
+    end_points = xception_39(img_input)
+
+    net = GlobalAveragePooling2D()(end_points['out32'])
+    nb_classes = 2
+    if nb_classes == 2:
+        activation = 'sigmoid'
+    else:
+        activation = 'softmax'
+    net = Dense(nb_classes, activation=activation)(net)
+    model = models.Model(img_input, net, name='xception')
+
+    toc = time()
+    print(round(toc - tic, 4))
+    model.summary()
+    # 存储模型图
+    plot_model(model, to_file=os.path.join(result_path, 'xception.png'), show_shapes=True)
